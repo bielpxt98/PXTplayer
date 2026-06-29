@@ -3,16 +3,23 @@ sub init()
     m.seriesCatalogScreen = m.top.findNode("seriesCatalogScreen")
     m.xtreamService = m.top.findNode("xtreamService")
     m.catalogTimeoutTimer = m.top.findNode("catalogTimeoutTimer")
+    m.seriesDetailScreen = m.top.findNode("seriesDetailScreen")
+    m.seriesDetailTimeoutTimer = m.top.findNode("seriesDetailTimeoutTimer")
 
     m.loginScreen.observeField("submit", "onLoginSubmit")
     m.loginScreen.observeField("backRequested", "onLoginBackRequested")
     m.seriesCatalogScreen.observeField("categorySelected", "onCategorySelected")
     m.seriesCatalogScreen.observeField("backRequested", "onCatalogBackRequested")
+    m.seriesCatalogScreen.observeField("seriesSelected", "onSeriesSelected")
+    m.seriesDetailScreen.observeField("backRequested", "onDetailBackRequested")
     m.xtreamService.observeField("result", "onXtreamResult")
     m.catalogTimeoutTimer.observeField("fire", "onCatalogTimeout")
+    m.seriesDetailTimeoutTimer.observeField("fire", "onSeriesDetailTimeout")
 
     m.connecting = false
     m.catalogLoading = false
+    m.detailLoading = false
+    m.selectedSeries = invalid
     m.credentials = invalid
 
     m.loginScreen.account = LoadPlaylistAccount()
@@ -20,6 +27,7 @@ sub init()
 end sub
 
 sub showLogin()
+    m.seriesDetailScreen.visible = false
     m.seriesCatalogScreen.visible = false
     m.loginScreen.visible = true
     m.loginScreen.setFocus(true)
@@ -27,6 +35,7 @@ end sub
 
 sub showCatalog()
     m.loginScreen.visible = false
+    m.seriesDetailScreen.visible = false
     m.seriesCatalogScreen.visible = true
     m.seriesCatalogScreen.callFunc("setCatalogFocus")
 end sub
@@ -98,6 +107,22 @@ sub onXtreamResult(event as object)
         else
             m.seriesCatalogScreen.message = result.message
         end if
+    else if result.action = "get_series_info"
+        m.detailLoading = false
+        m.seriesDetailTimeoutTimer.control = "stop"
+        m.seriesDetailScreen.loading = false
+        if result.success = true
+            m.seriesDetailScreen.details = result.details
+            m.seriesDetailScreen.message = ""
+        else
+            if result.code = "timeout"
+                m.seriesDetailScreen.message = "Tempo de conexao esgotado ao carregar os detalhes."
+            else if result.code = "invalid_response" or result.code = "invalid_json"
+                m.seriesDetailScreen.message = "O servidor retornou detalhes invalidos."
+            else
+                m.seriesDetailScreen.message = "Nao foi possivel carregar os detalhes da serie."
+            end if
+        end if
     end if
 end sub
 
@@ -146,4 +171,39 @@ sub onCatalogBackRequested()
     m.catalogLoading = false
     m.catalogTimeoutTimer.control = "stop"
     showLogin()
+end sub
+
+
+sub onSeriesSelected(event as object)
+    if m.catalogLoading or m.detailLoading then return
+    selected = event.getData()
+    if selected = invalid or PxtTrim(selected.series_id) = ""
+        m.seriesCatalogScreen.message = "Esta serie nao possui detalhes disponiveis."
+        return
+    end if
+    m.selectedSeries = selected
+    m.seriesCatalogScreen.visible = false
+    m.seriesDetailScreen.visible = true
+    m.seriesDetailScreen.selectedSeries = selected
+    m.seriesDetailScreen.loading = true
+    m.seriesDetailScreen.message = "Carregando detalhes..."
+    m.seriesDetailScreen.callFunc("setDetailFocus")
+    m.detailLoading = true
+    m.seriesDetailTimeoutTimer.control = "stop"
+    m.seriesDetailTimeoutTimer.control = "start"
+    m.xtreamService.callFunc("getSeriesInfo", { account: m.credentials, series_id: selected.series_id })
+end sub
+
+sub onSeriesDetailTimeout()
+    if m.detailLoading
+        m.detailLoading = false
+        m.seriesDetailScreen.loading = false
+        m.seriesDetailScreen.message = "Tempo de conexao esgotado ao carregar os detalhes."
+    end if
+end sub
+
+sub onDetailBackRequested()
+    m.detailLoading = false
+    m.seriesDetailTimeoutTimer.control = "stop"
+    showCatalog()
 end sub
