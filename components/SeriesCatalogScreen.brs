@@ -47,7 +47,15 @@ function onKeyEvent(key as string, press as boolean) as boolean
             item = focusedNode(m.categoryList)
             if item <> invalid then m.top.categorySelected = { category_id: safe(item.category_id, ""), name: item.title }
         else
-            m.top.message = "Detalhes de séries estão pausados nesta PR."
+            item = focusedNode(m.seriesGrid)
+            if item <> invalid
+                selected = nodeToAa(item)
+                if safe(selected.series_id, "") = ""
+                    m.top.message = "Esta serie nao possui detalhes disponiveis."
+                else
+                    m.top.seriesSelected = selected
+                end if
+            end if
         end if
         return true
     else if key = "back"
