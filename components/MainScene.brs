@@ -90,6 +90,7 @@ sub onLoginBackRequested()
 end sub
 sub onCatalogBackRequested()
     showLogin()
+  end if
 end sub
 sub onDetailBackRequested()
     m.seriesDetailsLoading = false : m.detailScreen.loading = false : showCatalog()
