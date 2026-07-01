@@ -32,10 +32,7 @@ end sub
 function onKeyEvent(key as string, press as boolean) as boolean
     if not press then return false
 
-    normalizedKey = LCase(key)
-    if normalizedKey = "enter" then normalizedKey = "ok"
-    if normalizedKey = "escape" or normalizedKey = "backspace" then normalizedKey = "back"
-
+    normalizedKey = NormalizeRemoteKey(key)
     if normalizedKey = "back"
         if m.login.visible
             showHome()

@@ -37,8 +37,7 @@ end sub
 function onKeyEvent(key as string, press as boolean) as boolean
     if not press then return false
 
-    normalizedKey = LCase(key)
-    if normalizedKey = "enter" then normalizedKey = "ok"
+    normalizedKey = NormalizeRemoteKey(key)
 
     if m.top.navigationEnabled <> true
         return true

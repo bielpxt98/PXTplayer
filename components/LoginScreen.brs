@@ -65,28 +65,26 @@ end sub
 sub openKeyboard()
     m.editingIndex = m.focusIndex
     if m.focusIndex = 0
-        m.keyboard.title = "DNS"
-        m.keyboard.text = m.dnsInput.text
+        m.dnsInput.SetFocus(true)
     else if m.focusIndex = 1
-        m.keyboard.title = "Usuário"
-        m.keyboard.text = m.usernameInput.text
+        m.usernameInput.SetFocus(true)
     else if m.focusIndex = 2
-        m.keyboard.title = "Senha"
-        m.keyboard.text = m.passwordInput.text
+        m.passwordInput.SetFocus(true)
     else
+        m.editingIndex = -1
         return
     end if
-    m.keyboard.buttons = ["OK", "Cancelar"]
-    m.top.GetScene().dialog = m.keyboard
 end sub
 
 sub closeKeyboard(applyValue as boolean)
-    if applyValue
-        if m.editingIndex = 0 then m.dnsInput.text = m.keyboard.text
-        if m.editingIndex = 1 then m.usernameInput.text = m.keyboard.text
-        if m.editingIndex = 2 then m.passwordInput.text = m.keyboard.text
+    if m.top.GetScene().dialog <> invalid
+        if applyValue
+            if m.editingIndex = 0 then m.dnsInput.text = m.keyboard.text
+            if m.editingIndex = 1 then m.usernameInput.text = m.keyboard.text
+            if m.editingIndex = 2 then m.passwordInput.text = m.keyboard.text
+        end if
+        m.top.GetScene().dialog = invalid
     end if
-    m.top.GetScene().dialog = invalid
     if m.editingIndex >= 0 then m.focusIndex = m.editingIndex
     m.editingIndex = -1
     updateFocus()
@@ -155,10 +153,20 @@ end sub
 function onKeyEvent(key as string, press as boolean) as boolean
     if not press then return false
 
-    normalizedKey = LCase(key)
-    if normalizedKey = "enter" then normalizedKey = "ok"
-    if normalizedKey = "select" then normalizedKey = "ok"
-    if normalizedKey = "escape" or normalizedKey = "backspace" then normalizedKey = "back"
+    normalizedKey = NormalizeRemoteKey(key)
+
+    if m.editingIndex >= 0
+        if normalizedKey = "ok"
+            closeKeyboard(true)
+            return true
+        else if normalizedKey = "back" and LCase(key) <> "backspace"
+            closeKeyboard(false)
+            return true
+        end if
+
+        ' Let TextEditBox handle normal typing plus Backspace/Delete while editing.
+        return false
+    end if
 
     if m.top.GetScene().dialog <> invalid
         if normalizedKey = "back"
